@@ -3,8 +3,8 @@ name: Ideer Parser Service
 on:
   workflow_dispatch: # Для ручного запуска из интерфейса GitHub
   repository_dispatch:
-    types: [ trigger_cron ] # Этот хук мы будем вызывать из cron-job
-    
+    types: [ trigger_pipeline ] # Этот хук мы будем вызывать из cron-job
+
 jobs:
   run-parser:
     runs-on: ubuntu-latest
