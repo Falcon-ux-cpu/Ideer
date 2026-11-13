@@ -31,18 +31,17 @@ def save_last_id(post_id):
         f.write(str(post_id))
 
 
-def send_email(post_id, date_str, category, text, img_url=None):
+def send_email(post_id, category, text, img_url=None):
     msg = MIMEMultipart("alternative")
     msg["Subject"] = "Подслушано"
     msg["From"] = EMAIL_SENDER
     msg["To"] = EMAIL_RECEIVER
 
-    # Формирование тела письма по ТЗ: ID на самом верху, ниже дата, категория и сам пост
+    # Формирование тела письма по ТЗ: ID на самом верху, категория ниже, затем сам пост (без даты)
     html = f"""
     <html>
       <body>
         <p><b>ID:</b> {post_id}</p>
-        <p><b>Дата публикации:</b> {date_str}</p>
         <p><b>Категория:</b> {category}</p>
         <hr>
         <p style="white-space: pre-wrap;">{text}</p>
@@ -109,29 +108,16 @@ def parse_ideer():
             consecutive_404_count = 0
             soup = BeautifulSoup(response.text, "html.parser")
             
-            # --- ПАРСИНГ ДАТЫ (ищем класс, начинающийся с post_date) ---
-            date_elem = soup.find(class_=lambda x: x and x.startswith("post_date"))
-            if date_elem:
-                # Пытаемся вытащить точную дату из всплывашки (tooltip), если её нет — берем текст элемента
-                tooltip = date_elem.find(class_=lambda x: x and "tooltip" in x)
-                date_str = tooltip.text.strip() if tooltip else date_elem.text.strip()
-            else:
-                date_str = "Дата не указана"
-
-            # --- ПАРСИНГ КАТЕГОРИИ (ищем класс, начинающийся с post_category) ---
-            cat_elem = soup.find(class_=lambda x: x and x.startswith("post_category"))
+            # --- ПАРСИНГ КАТЕГОРИИ ---
+            cat_elem = soup.find("a", class_="post-card__category")
             category = cat_elem.text.strip() if cat_elem else "Без категории"
 
-            # --- ПАРСИНГ ТЕКСТА (ищем класс, начинающийся с post_note) ---
-            text_elem = soup.find(class_=lambda x: x and x.startswith("post_note"))
+            # --- ПАРСИНГ ТЕКСТА ---
+            text_elem = soup.find("div", class_="post-card__body")
             
-            # Если из-за обновлений класс изменится, используем старые резервные селекторы
+            # Резервный поиск, если структура на странице единичного поста чуть отличается
             if not text_elem:
-                text_elem = (
-                    soup.find("div", class_="short-text") or 
-                    soup.find("div", class_="post-body") or
-                    soup.find("article")
-                )
+                text_elem = soup.find(class_=lambda x: x and "post-card__body" in x)
             
             if not text_elem:
                 print(f"Не удалось найти текст в посте {current_id}. Пропускаем карточку.")
@@ -147,8 +133,8 @@ def parse_ideer():
                     img_url = src if src.startswith("http") else "https://ideer.ru" + src
                     break
 
-            # Отправляем письмо с учетом новых полей
-            send_email(current_id, date_str, category, text, img_url)
+            # Отправляем письмо (без даты)
+            send_email(current_id, category, text, img_url)
             new_posts_counter += 1
             
             # Фиксируем успех в базе
