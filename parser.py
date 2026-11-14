@@ -37,7 +37,7 @@ def send_email(post_id, category, text, img_url=None):
     msg["From"] = EMAIL_SENDER
     msg["To"] = EMAIL_RECEIVER
 
-    # Тело письма по ТЗ: ID, категория, текст (без даты)
+    # Формирование тела письма: ID, категория, текст (без даты)
     html = f"""
     <html>
       <body>
@@ -66,7 +66,6 @@ def send_email(post_id, category, text, img_url=None):
 
 
 def parse_ideer():
-    # Имитируем реальный браузер через cloudscraper (обходит Cloudflare без тяжелого Chromium)
     scraper = cloudscraper.create_scraper(
         browser={
             "browser": "chrome",
@@ -92,7 +91,7 @@ def parse_ideer():
         url = f"https://ideer.ru/p/{current_id}"
         
         try:
-            time.sleep(1) # Пауза, чтобы не нагружать сервер
+            time.sleep(1)
             response = scraper.get(url, timeout=10)
             
             if response.status_code == 404:
@@ -110,21 +109,24 @@ def parse_ideer():
             soup = BeautifulSoup(response.text, "html.parser")
             
             # --- ПАРСИНГ КАТЕГОРИИ ---
-            cat_elem = soup.find("a", class_="post-card__category")
+            cat_elem = soup.find("a", class_=lambda x: x and "category" in x)
             category = cat_elem.text.strip() if cat_elem else "Без категории"
 
-            # --- ПАРСИНГ ТЕКСТА (новые классы сайта) ---
-            text_elem = soup.find("div", class_="post-card__body")
+            # --- УНИВЕРСАЛЬНЫЙ ПАРСИНГ ТЕКСТА ---
+            text_elem = soup.find(class_=lambda x: x and any(c in x for c in ["post-card__body", "post__body", "content", "note"]))
             
-            # Страховка на случай частичного совпадения класса с хвостиком (например, post-card__body__xyz)
             if not text_elem:
-                text_elem = soup.find(class_=lambda x: x and "post-card__body" in x)
+                text_elem = soup.find("article") or soup.find("main")
             
             if not text_elem:
                 print(f"Не удалось найти текст в посте {current_id}. Пропускаем карточку.")
                 continue
                 
             text = text_elem.text.strip()
+
+            if len(text) < 10:
+                print(f"Текст в посте {current_id} слишком короткий или пустой. Пропускаем.")
+                continue
 
             # --- ПАРСИНГ КАРТИНКИ ---
             img_url = None
@@ -150,4 +152,4 @@ def parse_ideer():
 
 if __name__ == "__main__":
     parse_ideer()
-        
+    
