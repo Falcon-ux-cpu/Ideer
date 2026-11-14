@@ -108,8 +108,9 @@ def parse_ideer():
             consecutive_404_count = 0
             soup = BeautifulSoup(response.text, "html.parser")
             
-            # --- ПАРСИНГ КАТЕГОРИИ ---
-            cat_elem = soup.find("a", class_=lambda x: x and "category" in x)
+            # --- УНИВЕРСАЛЬНЫЙ ПАРСИНГ КАТЕГОРИИ ---
+            # Ищем любой тег, класс которого содержит "category" или "topic"
+            cat_elem = soup.find(class_=lambda x: x and any(c in x for c in ["category", "topic"]))
             category = cat_elem.text.strip() if cat_elem else "Без категории"
 
             # --- УНИВЕРСАЛЬНЫЙ ПАРСИНГ ТЕКСТА ---
@@ -152,4 +153,3 @@ def parse_ideer():
 
 if __name__ == "__main__":
     parse_ideer()
-    
